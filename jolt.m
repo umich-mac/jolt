@@ -28,6 +28,15 @@ int main (int argc, const char * argv[]) {
 		}		
 	}
 	
+	pid_t myPid = fork();
+	if (myPid < 0)
+		exit(1); // can't fork
+	if (myPid > 0)
+		exit(0); // parent exit
+	
+	// child
+	setsid();
+
 	IOReturn returnValue = IOPMAssertionCreateWithName(assertion, kIOPMAssertionLevelOn, CFSTR("Powered by Jolt"), &assertionID);
 	
 	if (returnValue == kIOReturnSuccess) {
@@ -36,10 +45,8 @@ int main (int argc, const char * argv[]) {
 		} else {
 			NSLog(@"Jolt Injected - Display won't sleep");			
 		}
-
+		
 	}
-
-	[[NSString stringWithFormat:@"%d\n", [[NSProcessInfo processInfo] processIdentifier]] writeToFile:@"/tmp/jolt.pid" atomically:YES];
 	
 	// Wait to be killed
 	while (1) {
