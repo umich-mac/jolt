@@ -9,18 +9,23 @@ int main (int argc, const char * argv[]) {
 	
 	// Default is no idle sleep
 	CFStringRef assertion = kIOPMAssertionTypeNoIdleSleep;
+	BOOL should_fork = NO;
 	
 	opterr = 0;
-	while ((c = getopt(argc, (char **)argv, "d")) != -1) {
+	while ((c = getopt(argc, (char **)argv, "df")) != -1) {
 		switch (c) {
 			case 'd':
 				assertion = kIOPMAssertionTypeNoDisplaySleep;
 				break;
+			case 'f':
+				should_fork = YES;
+				break;
 			case '?':
-				NSLog(@"Usage: jolt [-d]");
+				NSLog(@"Usage: jolt [-d][-n]");
 				NSLog(@"   -d : prevent display from sleeping (also prevents computer from sleeping");
 				NSLog(@" by default, jolt will prevent the system from sleeping, but the display will sleep normally.");
-				NSLog(@" jolt will block until killed, and writes its pid to /tmp/jolt.pid for killing");
+				NSLog(@"   -f : fork from calling tty");
+				NSLog(@" by default, jolt will block until killed, and writes its pid to /tmp/jolt.pid for killing");
 				return(-1);
 				break;
 			default:
@@ -28,14 +33,16 @@ int main (int argc, const char * argv[]) {
 		}		
 	}
 	
-	pid_t myPid = fork();
-	if (myPid < 0)
-		exit(1); // can't fork
-	if (myPid > 0)
-		exit(0); // parent exit
-	
-	// child
-	setsid();
+	if (should_fork) {
+		pid_t myPid = fork();
+		if (myPid < 0)
+			exit(1); // can't fork
+		if (myPid > 0)
+			exit(0); // parent exit
+		
+		// child
+		setsid();		
+	}
 
 	IOReturn returnValue = IOPMAssertionCreateWithName(assertion, kIOPMAssertionLevelOn, CFSTR("Powered by Jolt"), &assertionID);
 	
@@ -49,10 +56,8 @@ int main (int argc, const char * argv[]) {
 	}
 	
 	// Wait to be killed
-	while (1) {
-		sleep(120);
-	}
-
+	pause();
+	
     [pool drain];
     return 0;
 }
